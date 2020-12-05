@@ -57,3 +57,17 @@ class Tag(models.Model):
 
     # def get_absolute_url(self):
     #     return reverse("_detail", kwargs={"pk": self.pk})
+
+
+class Ingredient(models.Model):
+    """Ingredient to be used in recipe"""
+    name = models.CharField(_("Name"), max_length=255)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             verbose_name=_("User"), on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = _("")
+        verbose_name_plural = _("s")
+
+    def __str__(self):
+        return self.name
