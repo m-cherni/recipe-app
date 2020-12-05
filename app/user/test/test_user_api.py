@@ -8,6 +8,7 @@ from rest_framework import status
 
 CREATE_USER_URL = reverse('user:create')
 TOKEN_URL = reverse('user:token')
+PROFILE_URL = reverse('user:profile')
 
 
 def create_user(**params):
@@ -96,7 +97,7 @@ class PublicUserApiTest(TestCase):
 
         res = self.client.post(TOKEN_URL, payload)
         self.assertNotIn('token', res.data)
-        self.assertTrue(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_token_no_user(self):
         """Test create token if user does not exist"""
@@ -107,7 +108,7 @@ class PublicUserApiTest(TestCase):
 
         res = self.client.post(TOKEN_URL, payload)
         self.assertNotIn('token', res.data)
-        self.assertTrue(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_token_with_missing_field(self):
         """Test create token with missing fields"""
@@ -118,4 +119,53 @@ class PublicUserApiTest(TestCase):
 
         res = self.client.post(TOKEN_URL, payload)
         self.assertNotIn('token', res.data)
-        self.assertTrue(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_user_unauthenticated(self):
+        """Test that authentication is srequired for user"""
+        res = self.client.get(PROFILE_URL)
+
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PrivateUserApiTest(TestCase):
+    """Test api requests that require authentication"""
+
+    def setUp(self):
+        self.user = create_user(
+            email='user@user.com',
+            password='user',
+            name='user'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_get_profile_for_authenticated_user(self):
+        """Test that authentcated user can access their profile"""
+        res = self.client.get(PROFILE_URL)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, {
+            'email': self.user.email,
+            'name': self.user.name
+        })
+
+    def test_post_not_allowed(self):
+        """Test that post requests are prohibited for profile api"""
+        res = self.client.post(PROFILE_URL, {})
+
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_update_profile(self):
+        """Test update profile for authenticated user"""
+        payload = {
+            'email': 'user@user.com',
+            'name': 'newuser'
+        }
+
+        res = self.client.patch(PROFILE_URL, payload)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.name, payload['name'])
+        # self.assertTrue(self.user.check_password(payload['password']))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
