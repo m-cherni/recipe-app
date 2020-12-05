@@ -21,7 +21,7 @@ class PublicIngredientAPITest(TestCase):
         """Test that authentication is required to access the api"""
         res = self.client.get(INGREDIENT_URL)
 
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class PrivateIngredientAPITest(TestCase):
