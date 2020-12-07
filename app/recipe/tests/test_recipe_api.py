@@ -165,3 +165,47 @@ class PrivateRecipeAPITest(TestCase):
         self.assertEqual(recipe.ingredients.count(), 2)
         self.assertIn(ing1, ingredients)
         self.assertIn(ing2, ingredients)
+
+    def test_partial_update_recipe(self):
+        """Testing updating a recipe wih patch"""
+        recipe = models.Recipe.objects.create(
+            user=self.user,
+            title='recipe',
+            time_minutes=5,
+            price=2.0
+        )
+
+        recipe.tags.add(create_test_tag_object(user=self.user))
+        new_tag = create_test_tag_object(user=self.user, name='new_tag')
+        payload = {'title': 'new recipe', 'tags': [new_tag.id]}
+        url = detail_url(recipe.id)
+        self.client.patch(url, payload)
+
+        recipe.refresh_from_db()
+        self.assertEqual(payload['title'], recipe.title)
+
+        tags = recipe.tags.all()
+        self.assertEqual(len(tags), 1)
+        self.assertIn(new_tag, tags)
+
+    def test_full_update_recipe(self):
+        """Test updating a recipe with put"""
+        recipe = models.Recipe.objects.create(user=self.user,
+                                              title='recipe',
+                                              time_minutes=5,
+                                              price=2.0)
+        recipe.tags.add(create_test_tag_object(user=self.user))
+        payload = {
+            'title': 'recipe-new',
+            'time_minutes': 6,
+            'price': 12.0
+        }
+        url = detail_url(recipe.id)
+        self.client.put(url, payload)
+
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.title, payload['title'])
+        self.assertEqual(recipe.time_minutes, payload['time_minutes'])
+        self.assertEqual(recipe.price, payload['price'])
+        tags = recipe.tags.all()
+        self.assertEqual(len(tags), 0)
