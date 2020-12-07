@@ -6,15 +6,31 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from core import models
-from recipe.serializers import RecipeSerializer
+from recipe.serializers import RecipeSerializer, RecipeDetailSerializer
 
 RECIPE_URL = reverse('recipe:recipe-list')
 
 
-def create_test_user(email="user@user.com", password="User123#"):
+def create_test_user_object(email="user@user.com", password="User123#"):
+    "Create and return a user object"
     return get_user_model().objects.create_user(
         email, password
     )
+
+
+def create_test_tag_object(user, name='tag-1'):
+    """Create and return a tag object"""
+    return models.Tag.objects.create(user=user, name=name)
+
+
+def create_test_ingredient_object(user, name='ingredient-1'):
+    """Create and return an ingredient object"""
+    return models.Ingredient.objects.create(user=user, name=name)
+
+
+def detail_url(recipe_id):
+    """Return url for recipe details"""
+    return reverse('recipe:recipe-detail', args=[recipe_id])
 
 
 class PublicRecipeAPITest(TestCase):
@@ -33,7 +49,7 @@ class PrivateRecipeAPITest(TestCase):
     """Test the private access to the Recipe api"""
 
     def setUp(self):
-        self.user = create_test_user()
+        self.user = create_test_user_object()
         self.client = APIClient()
 
         self.client.force_authenticate(user=self.user)
@@ -58,7 +74,8 @@ class PrivateRecipeAPITest(TestCase):
     def test_list_recipe_for_the_current_user(self):
         """Test that returned recipes list is only for the current user"""
 
-        user1 = create_test_user(email='user1@user.com', password='User123#')
+        user1 = create_test_user_object(
+            email='user1@user.com', password='User123#')
 
         models.Recipe.objects.create(user=user1,
                                      title='recipe-1',
@@ -74,3 +91,19 @@ class PrivateRecipeAPITest(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]['title'], recipe.title)
+
+    def test_view_recipe_detail(self):
+        """Test viewing recipe detail"""
+        recipe = models.Recipe.objects.create(user=self.user,
+                                              title='recipe',
+                                              time_minutes=5,
+                                              price=5.0)
+        recipe.tags.add(create_test_tag_object(user=self.user))
+        recipe.ingredients.add(create_test_ingredient_object(user=self.user))
+
+        url = detail_url(recipe.id)
+
+        res = self.client.get(url)
+
+        serializer = RecipeDetailSerializer(recipe)
+        self.assertEqual(res.data, serializer.data)

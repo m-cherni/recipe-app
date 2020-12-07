@@ -33,7 +33,7 @@ class IngredientViewSet(BaseRecipeViewSet):
     serializer_class = serializers.IngredientSerializer
 
 
-class RecipeViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+class RecipeViewSet(viewsets.ModelViewSet):
     """Manage the recipe view"""
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -43,3 +43,10 @@ class RecipeViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
     def get_queryset(self):
         """Return object for the current authenticated user only"""
         return self.queryset.filter(user=self.request.user).order_by('-title')
+
+    def get_serializer_class(self):
+        """Return appropriate serailizer class based on action"""
+        if self.action == 'retrieve':
+            return serializers.RecipeDetailSerializer
+
+        return self.serializer_class
