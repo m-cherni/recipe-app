@@ -220,6 +220,69 @@ class PrivateRecipeAPITest(TestCase):
         tags = recipe.tags.all()
         self.assertEqual(len(tags), 0)
 
+    def test_filter_recipe_by_tags(self):
+        """Test filter recipe by tags"""
+        recipe1 = models.Recipe.objects.create(user=self.user,
+                                               title='recipe-1',
+                                               time_minutes=5,
+                                               price=2.0)
+        recipe2 = models.Recipe.objects.create(user=self.user,
+                                               title='recipe-2',
+                                               time_minutes=50,
+                                               price=12.0)
+        tag1 = create_test_tag_object(self.user, name='tag-1')
+        tag2 = create_test_tag_object(self.user, name='tag-2')
+
+        recipe1.tags.add(tag1)
+        recipe2.tags.add(tag2)
+
+        recipe3 = models.Recipe.objects.create(user=self.user,
+                                               title='recipe-3',
+                                               time_minutes=8,
+                                               price=20.0)
+
+        res = self.client.get(RECIPE_URL, {'tags': f'{tag1.id},{tag2.id}'})
+
+        serializer1 = RecipeSerializer(recipe1)
+        serializer2 = RecipeSerializer(recipe2)
+        serializer3 = RecipeSerializer(recipe3)
+
+        self.assertIn(serializer1.data, res.data)
+        self.assertIn(serializer2.data, res.data)
+        self.assertNotIn(serializer3.data, res.data)
+
+    def test_filter_recipe_with_ingredients(self):
+        """Test filtering by ingredients"""
+        recipe1 = models.Recipe.objects.create(user=self.user,
+                                               title='recipe-1',
+                                               time_minutes=5,
+                                               price=2.0)
+        recipe2 = models.Recipe.objects.create(user=self.user,
+                                               title='recipe-2',
+                                               time_minutes=50,
+                                               price=12.0)
+        ing1 = create_test_ingredient_object(self.user, name='ing-1')
+        ing2 = create_test_ingredient_object(self.user, name='ing-2')
+
+        recipe1.ingredients.add(ing1)
+        recipe2.ingredients.add(ing2)
+
+        recipe3 = models.Recipe.objects.create(user=self.user,
+                                               title='recipe-3',
+                                               time_minutes=8,
+                                               price=20.0)
+
+        res = self.client.get(
+            RECIPE_URL, {'ingredients': f'{ing1.id},{ing2.id}'})
+
+        serializer1 = RecipeSerializer(recipe1)
+        serializer2 = RecipeSerializer(recipe2)
+        serializer3 = RecipeSerializer(recipe3)
+
+        self.assertIn(serializer1.data, res.data)
+        self.assertIn(serializer2.data, res.data)
+        self.assertNotIn(serializer3.data, res.data)
+
 
 class RecipeImageUploadTest(TestCase):
     """Test image upload for Recipe model"""

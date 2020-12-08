@@ -16,7 +16,15 @@ class BaseRecipeViewSet(viewsets.GenericViewSet, mixins.ListModelMixin,
 
     def get_queryset(self):
         """Return object for the current authenticated user only"""
-        return self.queryset.filter(user=self.request.user).order_by('-name')
+        assigned_only = bool(
+            int(self.request.query_params.get('assigned_only', 0))
+        )
+        queryset = self.queryset
+        if assigned_only:
+            queryset = queryset.filter(recipe__isnull=False)
+        return queryset.filter(
+            user=self.request.user
+        ).order_by('-name').distinct()
 
     def perform_create(self, serializer):
         """Assign the current user to the created tag"""
@@ -42,9 +50,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = serializers.RecipeSerializer
 
+    def _params_to_int(self, qs):
+        """Convert a list of string id to a list of integers id"""
+        return [int(str_id) for str_id in qs.split(',')]
+
     def get_queryset(self):
         """Return object for the current authenticated user only"""
-        return self.queryset.filter(user=self.request.user).order_by('-title')
+        tags = self.request.query_params.get('tags')
+        ingredients = self.request.query_params.get('ingredients')
+        queryset = self.queryset
+        if tags:
+            tags_id = self._params_to_int(tags)
+            queryset = queryset.filter(tags__id__in=tags_id)
+        if ingredients:
+            ingredients_id = self._params_to_int(ingredients)
+            queryset = queryset.filter(ingredients__id__in=ingredients_id)
+        return queryset.filter(user=self.request.user).order_by('-title')
 
     def get_serializer_class(self):
         """Return appropriate serailizer class based on action"""
