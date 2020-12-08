@@ -1,3 +1,5 @@
+import os
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, \
     PermissionsMixin
@@ -5,7 +7,13 @@ from django.utils.translation import ugettext_lazy as _
 
 from django.conf import settings
 
-# Create your models here.
+
+def recipe_image_file_path(instance, filename):
+    """Generate file path for new recipe"""
+    extention = filename.split('.')[-1]
+    filename = f'{uuid.uuid4()}.{extention}'
+
+    return os.path.join('uploads/recipe/', filename)
 
 
 class UserManager(BaseUserManager):
@@ -83,6 +91,7 @@ class Recipe(models.Model):
     link = models.CharField(_("Link"), max_length=255, blank=True)
     ingredients = models.ManyToManyField("Ingredient", verbose_name=_(""))
     tags = models.ManyToManyField("Tag", verbose_name=_(""))
+    image = models.ImageField(null=True, upload_to=recipe_image_file_path)
 
     class Meta:
         verbose_name = _('')
